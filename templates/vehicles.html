@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Vehicle Management{% endblock %}
+{% block page_title %}Vehicle Management{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Action and Search Header -->
+    <div class="page-toolbar">
+        <form method="GET" action="{{ url_for('vehicles_list') }}" class="search-form">
+            <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input 
+                    type="text" 
+                    name="search" 
+                    class="form-control search-input" 
+                    placeholder="Search by reg number (e.g. TN38), model, or owner..." 
+                    value="{{ search }}"
+                >
+            </div>
+            <button type="submit" class="btn btn-secondary">Search</button>
+            {% if search %}
+                <a href="{{ url_for('vehicles_list') }}" class="btn btn-outline">Clear</a>
+            {% endif %}
+        </form>
+
+        <button class="btn btn-primary" id="openAddVehicleBtn" onclick="openModal('addVehicleModal')">
+            + Register Vehicle
+        </button>
+    </div>
+
+    <!-- Vehicles List Table with Relational Owner Join -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title-group">
+                <h3>Registered Vehicles (Oracle Table: VEHICLE JOIN CUSTOMER)</h3>
+                <p class="card-subtitle">Displaying {{ vehicles|length }} vehicles linked to registered customer profiles</p>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Reg. Number</th>
+                        <th>Type</th>
+                        <th>Model</th>
+                        <th>Owner (Foreign Key)</th>
+                        <th>Contact</th>
+                        <th>Services</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if vehicles %}
+                        {% for v in vehicles %}
+                        <tr>
+                            <td><span class="id-badge">#{{ v.vehicle_id }}</span></td>
+                            <td><strong class="plate-badge">{{ v.vehicle_number }}</strong></td>
+                            <td>
+                                <span class="badge badge-type">{{ v.vehicle_type }}</span>
+                            </td>
+                            <td><strong>{{ v.vehicle_model }}</strong></td>
+                            <td>
+                                <a href="{{ url_for('customers_list', search=v.customer_name) }}" class="owner-link">
+                                    {{ v.customer_name }}
+                                </a>
+                            </td>
+                            <td><code>{{ v.contact_number }}</code></td>
+                            <td>
+                                <a href="{{ url_for('services_list', vehicle_id=v.vehicle_id) }}" class="badge {% if v.service_count > 0 %}badge-info{% else %}badge-neutral{% endif %}">
+                                    {{ v.service_count }} Service(s)
+                                </a>
+                            </td>
+                            <td class="text-right table-actions">
+                                <a href="{{ url_for('vehicle_edit', vehicle_id=v.vehicle_id) }}" class="btn btn-sm btn-outline">
+                                    Edit
+                                </a>
+
+                                <form 
+                                    method="POST" 
+                                    action="{{ url_for('vehicle_delete', vehicle_id=v.vehicle_id) }}" 
+                                    style="display:inline;"
+                                    onsubmit="return confirmDeleteVehicle('{{ v.vehicle_number }}', {{ v.service_count }});"
+                                >
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center empty-cell">
+                                {% if not db_connected %}
+                                    <p class="text-muted">Oracle Database is offline. Configure credentials to display live vehicles.</p>
+                                {% elif search %}
+                                    <p class="text-muted">No vehicles matched your search query "<strong>{{ search }}</strong>".</p>
+                                {% else %}
+                                    <p class="text-muted">No vehicles registered yet. Click "+ Register Vehicle" to add one.</p>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Register New Vehicle -->
+<div class="modal-backdrop" id="addVehicleModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Register New Vehicle</h3>
+            <button type="button" class="modal-close" onclick="closeModal('addVehicleModal')">&times;</button>
+        </div>
+
+        <form method="POST" action="{{ url_for('vehicle_add') }}" id="addVehicleForm" class="form-standard">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="vehicle_number" class="form-label">Registration Number <span class="required">*</span></label>
+                    <input 
+                        type="text" 
+                        name="vehicle_number" 
+                        id="vehicle_number" 
+                        class="form-control text-uppercase" 
+                        placeholder="e.g. TN38AB1234" 
+                        required
+                        maxlength="20"
+                    >
+                    <small class="form-hint">Unique constraint enforced by Oracle <code>uq_vehicle_number</code>.</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-half">
+                        <label for="vehicle_type" class="form-label">Vehicle Type <span class="required">*</span></label>
+                        <select name="vehicle_type" id="vehicle_type" class="form-control" required>
+                            <option value="">-- Select Type --</option>
+                            <option value="Car">Car</option>
+                            <option value="Bike">Bike</option>
+                            <option value="Scooter">Scooter</option>
+                            <option value="SUV">SUV</option>
+                            <option value="Van">Van</option>
+                            <option value="Truck">Truck</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-half">
+                        <label for="vehicle_model" class="form-label">Vehicle Model <span class="required">*</span></label>
+                        <input 
+                            type="text" 
+                            name="vehicle_model" 
+                            id="vehicle_model" 
+                            class="form-control" 
+                            placeholder="e.g. Hyundai i20" 
+                            required
+                            maxlength="100"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="customer_id" class="form-label">Assign Owner (Customer FK) <span class="required">*</span></label>
+                    <select name="customer_id" id="customer_id" class="form-control" required>
+                        <option value="">-- Select Registered Customer --</option>
+                        {% for c in customers %}
+                            <option value="{{ c.customer_id }}">{{ c.customer_name }} ({{ c.email }})</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-hint">Links to <code>CUSTOMER(customer_id)</code> via Foreign Key <code>fk_vehicle_customer</code>.</small>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addVehicleModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Vehicle (INSERT)</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDeleteVehicle(regNumber, serviceCount) {
+    if (serviceCount > 0) {
+        alert("Referential Integrity Alert:\n\nVehicle '" + regNumber + "' has " + serviceCount + " associated service record(s). Oracle Database foreign key constraints prevent deleting a vehicle with existing service history.");
+        return false;
+    }
+    return confirm("Are you sure you want to delete vehicle '" + regNumber + "'? This operation will execute a DELETE statement in Oracle.");
+}
+</script>
+{% endblock %}

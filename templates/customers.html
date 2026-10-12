@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Customer Management{% endblock %}
+{% block page_title %}Customer Management{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Action and Search Header -->
+    <div class="page-toolbar">
+        <form method="GET" action="{{ url_for('customers_list') }}" class="search-form">
+            <div class="search-input-wrapper">
+                <span class="search-icon">🔍</span>
+                <input 
+                    type="text" 
+                    name="search" 
+                    class="form-control search-input" 
+                    placeholder="Search by name, phone, or email..." 
+                    value="{{ search }}"
+                >
+            </div>
+            <button type="submit" class="btn btn-secondary">Search</button>
+            {% if search %}
+                <a href="{{ url_for('customers_list') }}" class="btn btn-outline">Clear</a>
+            {% endif %}
+        </form>
+
+        <button class="btn btn-primary" id="openAddCustomerBtn" onclick="openModal('addCustomerModal')">
+            + Add New Customer
+        </button>
+    </div>
+
+    <!-- Customers List Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title-group">
+                <h3>Registered Customers (Oracle Table: CUSTOMER)</h3>
+                <p class="card-subtitle">Displaying {{ customers|length }} customer records with vehicle ownership counts</p>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Customer Name</th>
+                        <th>Contact Number</th>
+                        <th>Email Address</th>
+                        <th>Address</th>
+                        <th>Vehicles</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if customers %}
+                        {% for c in customers %}
+                        <tr>
+                            <td><span class="id-badge">#{{ c.customer_id }}</span></td>
+                            <td><strong>{{ c.customer_name }}</strong></td>
+                            <td><code>{{ c.contact_number }}</code></td>
+                            <td>{{ c.email }}</td>
+                            <td>{{ c.address or '-' }}</td>
+                            <td>
+                                <span class="badge {% if c.vehicle_count > 0 %}badge-info{% else %}badge-neutral{% endif %}">
+                                    {{ c.vehicle_count }} Vehicle(s)
+                                </span>
+                            </td>
+                            <td class="text-right table-actions">
+                                <a href="{{ url_for('customer_edit', customer_id=c.customer_id) }}" class="btn btn-sm btn-outline">
+                                    Edit
+                                </a>
+
+                                <form 
+                                    method="POST" 
+                                    action="{{ url_for('customer_delete', customer_id=c.customer_id) }}" 
+                                    style="display:inline;"
+                                    onsubmit="return confirmDeleteCustomer('{{ c.customer_name }}', {{ c.vehicle_count }});"
+                                >
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center empty-cell">
+                                {% if not db_connected %}
+                                    <p class="text-muted">Oracle Database is offline. Configure credentials to display live customers.</p>
+                                {% elif search %}
+                                    <p class="text-muted">No customers matched your search query "<strong>{{ search }}</strong>".</p>
+                                {% else %}
+                                    <p class="text-muted">No customers found. Click "+ Add New Customer" to create one.</p>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add New Customer -->
+<div class="modal-backdrop" id="addCustomerModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Add New Customer</h3>
+            <button type="button" class="modal-close" onclick="closeModal('addCustomerModal')">&times;</button>
+        </div>
+
+        <form method="POST" action="{{ url_for('customer_add') }}" id="addCustomerForm" class="form-standard">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="customer_name" class="form-label">Customer Name <span class="required">*</span></label>
+                    <input 
+                        type="text" 
+                        name="customer_name" 
+                        id="customer_name" 
+                        class="form-control" 
+                        placeholder="e.g. Naveen K" 
+                        required
+                        maxlength="100"
+                    >
+                    <small class="form-hint">Required. Full name of the vehicle owner.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="contact_number" class="form-label">Contact Number <span class="required">*</span></label>
+                    <input 
+                        type="tel" 
+                        name="contact_number" 
+                        id="contact_number" 
+                        class="form-control" 
+                        placeholder="e.g. 9842112233" 
+                        required
+                        pattern="[0-9]{10}"
+                        title="Please enter a valid 10-digit mobile number"
+                        maxlength="20"
+                    >
+                    <small class="form-hint">Required 10-digit mobile number.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="email" class="form-label">Email Address <span class="required">*</span></label>
+                    <input 
+                        type="email" 
+                        name="email" 
+                        id="email" 
+                        class="form-control" 
+                        placeholder="e.g. naveen@example.com" 
+                        required
+                        maxlength="100"
+                    >
+                    <small class="form-hint">Must be unique (Oracle UNIQUE constraint <code>uq_customer_email</code>).</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="address" class="form-label">Address</label>
+                    <textarea 
+                        name="address" 
+                        id="address" 
+                        class="form-control" 
+                        rows="2" 
+                        placeholder="e.g. Coimbatore, Tamil Nadu"
+                        maxlength="255"
+                    ></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addCustomerModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Customer (INSERT)</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function confirmDeleteCustomer(name, vehicleCount) {
+    if (vehicleCount > 0) {
+        alert("Referential Integrity Alert:\n\n'" + name + "' owns " + vehicleCount + " vehicle(s). Oracle Database foreign key constraints will block this deletion until all related vehicles and services are removed.");
+        return false;
+    }
+    return confirm("Are you sure you want to delete customer '" + name + "'? This operation will execute a DELETE statement in Oracle.");
+}
+</script>
+{% endblock %}

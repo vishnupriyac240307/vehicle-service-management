@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Vehicle Service Management{% endblock %} | TN SKILLS Oracle</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon">🚗</div>
+                <div class="logo-text">
+                    <h2>AutoService DB</h2>
+                    <span class="badge-subtitle">TN SKILLS • Oracle SQL</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">MAIN MENU</div>
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+                <a href="{{ url_for('customers_list') }}" class="nav-link {% if request.endpoint in ['customers_list', 'customer_edit'] %}active{% endif %}">
+                    <span class="nav-icon">👥</span>
+                    <span class="nav-label">Customers</span>
+                </a>
+                <a href="{{ url_for('vehicles_list') }}" class="nav-link {% if request.endpoint in ['vehicles_list', 'vehicle_edit'] %}active{% endif %}">
+                    <span class="nav-icon">🚘</span>
+                    <span class="nav-label">Vehicles</span>
+                </a>
+                <a href="{{ url_for('services_list') }}" class="nav-link {% if request.endpoint in ['services_list', 'service_edit'] %}active{% endif %}">
+                    <span class="nav-icon">🔧</span>
+                    <span class="nav-label">Services</span>
+                </a>
+
+                <div class="nav-section-title">ANALYSIS & DBA</div>
+                <a href="{{ url_for('reports') }}" class="nav-link {% if request.endpoint == 'reports' %}active{% endif %}">
+                    <span class="nav-icon">📑</span>
+                    <span class="nav-label">SQL Reports</span>
+                </a>
+                <a href="{{ url_for('db_status_page') }}" class="nav-link {% if request.endpoint == 'db_status_page' %}active{% endif %}">
+                    <span class="nav-icon">🗄️</span>
+                    <span class="nav-label">Oracle DB Status</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="db-chip chip-online">
+                    <span class="status-dot"></span>
+                    <span class="chip-text">
+                        Oracle Database 23ai Online
+                    </span>
+                </div>
+                <div class="course-credit">TN SKILLS • DBMS Lab Project</div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <div class="main-wrapper">
+            <!-- Top Header -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="mobile-toggle" id="sidebarToggle" aria-label="Toggle Menu">☰</button>
+                    <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+                </div>
+
+                <div class="topbar-right">
+                    <a href="{{ url_for('seed_sample_data') }}" class="btn btn-sm btn-primary" title="Push or reset sample records (Arun, Meena, Naveen, vehicles, services)">
+                        🔄 Reset Sample Database
+                    </a>
+
+                    <div class="db-indicator">
+                        <span class="indicator-label">Target DB:</span>
+                        <code class="indicator-dsn">{{ db_status.dsn }}</code>
+                        <span class="status-pill pill-success">✓ Oracle Connected</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Flash Alert Messages -->
+            <div class="flash-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}">
+                                <span class="alert-icon">
+                                    {% if category == 'success' %}✓{% elif category == 'danger' %}✖{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}
+                                </span>
+                                <div class="alert-message">{{ message }}</div>
+                                <button type="button" class="alert-close" onclick="this.parentElement.remove()">×</button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            </div>
+
+            <!-- Page Main Content -->
+            <main class="content-area">
+                {% block content %}{% endblock %}
+            </main>
+
+            <!-- Page Footer -->
+            <footer class="app-footer">
+                <div>Vehicle Service Management Database System &copy; 2026 | TN SKILLS Database Administration Back End – Oracle</div>
+                <div class="footer-links">
+                    <span>Engine: Oracle Database</span>
+                    <span>•</span>
+                    <span>Driver: python-oracledb</span>
+                    <span>•</span>
+                    <a href="{{ url_for('db_status_page') }}">Connection Diagnostics</a>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Main JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Service #{{ service.service_id }}{% endblock %}
+{% block page_title %}Edit Service Work Order{% endblock %}
+
+{% block content %}
+<div class="edit-page-container">
+    <div class="card form-card">
+        <div class="card-header">
+            <div class="card-title-group">
+                <h3>Edit Service Order (Oracle UPDATE)</h3>
+                <p class="card-subtitle">Updating Primary Key <code>service_id = {{ service.service_id }}</code></p>
+            </div>
+            <a href="{{ url_for('services_list') }}" class="btn btn-sm btn-outline">&larr; Back to Services</a>
+        </div>
+
+        <form method="POST" action="{{ url_for('service_edit', service_id=service.service_id) }}" class="form-standard">
+            <div class="card-body">
+                <div class="form-group">
+                    <label class="form-label">Service Order ID (Auto-Generated Identity PK)</label>
+                    <input type="text" class="form-control" value="#{{ service.service_id }}" disabled readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="vehicle_id" class="form-label">Vehicle (Foreign Key) <span class="required">*</span></label>
+                    <select name="vehicle_id" id="vehicle_id" class="form-control" required>
+                        {% for v in vehicles %}
+                            <option value="{{ v.vehicle_id }}" {% if v.vehicle_id == service.vehicle_id %}selected{% endif %}>
+                                {{ v.vehicle_number }} - {{ v.vehicle_model }} (Owner: {{ v.customer_name }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-half">
+                        <label for="service_date" class="form-label">Service Date <span class="required">*</span></label>
+                        <input 
+                            type="date" 
+                            name="service_date" 
+                            id="service_date" 
+                            class="form-control" 
+                            value="{{ service.service_date }}" 
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group col-half">
+                        <label for="service_type" class="form-label">Service Type <span class="required">*</span></label>
+                        <input 
+                            type="text" 
+                            name="service_type" 
+                            id="service_type" 
+                            class="form-control" 
+                            value="{{ service.service_type }}" 
+                            required
+                            maxlength="50"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-half">
+                        <label for="service_status" class="form-label">Service Status <span class="required">*</span></label>
+                        <select name="service_status" id="service_status" class="form-control" required>
+                            <option value="Pending" {% if service.service_status == 'Pending' %}selected{% endif %}>Pending</option>
+                            <option value="Completed" {% if service.service_status == 'Completed' %}selected{% endif %}>Completed</option>
+                        </select>
+                        <small class="form-hint">Oracle CHECK constraint: <code>chk_service_status</code>.</small>
+                    </div>
+
+                    <div class="form-group col-half">
+                        <label for="service_cost" class="form-label">Service Cost (₹ INR) <span class="required">*</span></label>
+                        <input 
+                            type="number" 
+                            name="service_cost" 
+                            id="service_cost" 
+                            class="form-control" 
+                            value="{{ service.service_cost }}" 
+                            step="0.01" 
+                            min="0" 
+                            required
+                        >
+                        <small class="form-hint">Oracle CHECK constraint: <code>service_cost >= 0</code>.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer form-actions">
+                <a href="{{ url_for('services_list') }}" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary">Update Service Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block title %}Oracle SQL Reports{% endblock %}
+{% block page_title %}Oracle SQL Analytical Reports{% endblock %}
+
+{% block content %}
+<div class="reports-page-container">
+    <!-- Reports Navigation Bar / Section Anchor Links -->
+    <div class="report-nav-bar">
+        <a href="#section-aggregates" class="btn-report-nav">1. Aggregate Stats</a>
+        <a href="#section-group-by" class="btn-report-nav">2. Status Grouping</a>
+        <a href="#section-join" class="btn-report-nav highlight">3. Three-Table JOIN</a>
+        <a href="#section-pending" class="btn-report-nav">4. Pending Services</a>
+        <a href="#section-date-sort" class="btn-report-nav">5. Date Sorted</a>
+        <a href="#section-tn38" class="btn-report-nav">6. Vehicle Prefix (TN38)</a>
+        <a href="#section-cost-range" class="btn-report-nav">7. Cost Range (2k-4k)</a>
+    </div>
+
+    <!-- 1. AGGREGATE FUNCTIONS REPORT (SECTION E) -->
+    <section class="report-section" id="section-aggregates">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <div class="section-tag">OPERATION: E. AGGREGATE FUNCTIONS</div>
+                    <h3>Summary Statistics (COUNT, SUM, AVG, MAX, MIN)</h3>
+                    <p class="card-subtitle">Comprehensive mathematical aggregation across all service work orders</p>
+                </div>
+            </div>
+
+            <div class="sql-code-box">
+                <span class="sql-tag">Oracle SQL:</span>
+                <code>SELECT COUNT(service_id), SUM(service_cost), ROUND(AVG(service_cost), 2), MAX(service_cost), MIN(service_cost) FROM SERVICE;</code>
+            </div>
+
+            <div class="agg-cards-grid">
+                <div class="agg-box">
+                    <span class="agg-label">COUNT(service_id)</span>
+                    <span class="agg-num">{{ aggregates.total_count or 0 }}</span>
+                    <span class="agg-sub">Total Service Orders</span>
+                </div>
+                <div class="agg-box highlight-box">
+                    <span class="agg-label">SUM(service_cost)</span>
+                    <span class="agg-num">₹{{ "{:,.2f}".format(aggregates.total_cost or 0) }}</span>
+                    <span class="agg-sub">Total Center Revenue</span>
+                </div>
+                <div class="agg-box">
+                    <span class="agg-label">AVG(service_cost)</span>
+                    <span class="agg-num">₹{{ "{:,.2f}".format(aggregates.avg_cost or 0) }}</span>
+                    <span class="agg-sub">Average Work Order Cost</span>
+                </div>
+                <div class="agg-box">
+                    <span class="agg-label">MAX(service_cost)</span>
+                    <span class="agg-num">₹{{ "{:,.2f}".format(aggregates.max_cost or 0) }}</span>
+                    <span class="agg-sub">Highest Recorded Cost</span>
+                </div>
+                <div class="agg-box">
+                    <span class="agg-label">MIN(service_cost)</span>
+                    <span class="agg-num">₹{{ "{:,.2f}".format(aggregates.min_cost or 0) }}</span>
+                    <span class="agg-sub">Lowest Recorded Cost</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. GROUP BY REPORT (SECTION F) -->
+    <section class="report-section" id="section-group-by">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <div class="section-tag">OPERATION: F. GROUPING (GROUP BY)</div>
+                    <h3>Service Distribution by Status</h3>
+                    <p class="card-subtitle">Aggregated volume and financial breakdown grouped by <code>service_status</code></p>
+                </div>
+            </div>
+
+            <div class="sql-code-box">
+                <span class="sql-tag">Oracle SQL:</span>
+                <code>SELECT service_status, COUNT(service_id), SUM(service_cost) FROM SERVICE GROUP BY service_status;</code>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Service Status</th>
+                            <th>Number of Services (COUNT)</th>
+                            <th>Total Cost for Status (SUM)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if group_by_status %}
+                            {% for g in group_by_status %}
+                            <tr>
+                                <td>
+                                    <span class="badge {% if g.service_status == 'Completed' %}badge-success{% else %}badge-warning{% endif %}">
+                                        {{ g.service_status }}
+                                    </span>
+                                </td>
+                                <td><strong>{{ g.service_count }}</strong> order(s)</td>
+                                <td><strong class="cost-text">₹{{ "{:,.2f}".format(g.status_total_cost) }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center empty-cell">No group records available.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. THREE-TABLE JOIN REPORT (SECTION G) -->
+    <section class="report-section" id="section-join">
+        <div class="card highlight-card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <div class="section-tag tag-primary">OPERATION: G. THREE-TABLE RELATIONAL JOIN</div>
+                    <h3>Customer–Vehicle–Service Master Work Order Log</h3>
+                    <p class="card-subtitle">Combines CUSTOMER, VEHICLE, and SERVICE ordered by <code>service_date DESC</code></p>
+                </div>
+            </div>
+
+            <div class="sql-code-box">
+                <span class="sql-tag">Oracle SQL:</span>
+                <code>SELECT c.customer_name, v.vehicle_number, v.vehicle_model, TO_CHAR(s.service_date, 'YYYY-MM-DD'), s.service_type, s.service_status, s.service_cost FROM CUSTOMER c JOIN VEHICLE v ON c.customer_id = v.customer_id JOIN SERVICE s ON v.vehicle_id = s.vehicle_id ORDER BY s.service_date DESC;</code>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Customer Name</th>
+                            <th>Vehicle Reg. Number</th>
+                            <th>Vehicle Model</th>
+                            <th>Service Date</th>
+                            <th>Service Type</th>
+                            <th>Status</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if full_join_report %}
+                            {% for r in full_join_report %}
+                            <tr>
+                                <td><strong>{{ r.customer_name }}</strong></td>
+                                <td><span class="plate-badge">{{ r.vehicle_number }}</span></td>
+                                <td>{{ r.vehicle_model }}</td>
+                                <td><strong>{{ r.service_date }}</strong></td>
+                                <td>{{ r.service_type }}</td>
+                                <td>
+                                    <span class="badge {% if r.service_status == 'Completed' %}badge-success{% else %}badge-warning{% endif %}">
+                                        {{ r.service_status }}
+                                    </span>
+                                </td>
+                                <td><strong class="cost-text">₹{{ "{:,.2f}".format(r.service_cost) }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center empty-cell">No records returned by JOIN query.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. PENDING SERVICES (SECTION D1) -->
+    <section class="report-section" id="section-pending">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <div class="section-tag">OPERATION: D1. FILTERING</div>
+                    <h3>Services with 'Pending' Status</h3>
+                    <p class="card-subtitle">Work orders awaiting technician completion</p>
+                </div>
+            </div>
+
+            <div class="sql-code-box">
+                <span class="sql-tag">Oracle SQL:</span>
+                <code>SELECT * FROM SERVICE WHERE service_status = 'Pending';</code>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Vehicle Number</th>
+                            <th>Model</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Service Type</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if pending_services %}
+                            {% for p in pending_services %}
+                            <tr>
+                                <td><span class="id-badge">#{{ p.service_id }}</span></td>
+                                <td><strong>{{ p.vehicle_number }}</strong></td>
+                                <td>{{ p.vehicle_model }}</td>
+                                <td>{{ p.customer_name }}</td>
+                                <td>{{ p.service_date }}</td>
+                                <td>{{ p.service_type }}</td>
+                                <td><strong class="cost-text">₹{{ "{:,.2f}".format(p.service_cost) }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center empty-cell">No pending service orders currently recorded.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. SERVICES SORTED BY DATE (SECTION D2) -->
+    <section class="report-section" id="section-date-sort">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <div class="section-tag">OPERATION: D2. SORTING</div>
+                    <h3>Services Sorted by Date in Descending Order</h3>
+                    <p class="card-subtitle">Chronological order showing the newest service operations first</p>
+                </div>
+            </div>
+
+            <div class="sql-code-box">
+                <span class="sql-tag">Oracle SQL:</span>
+                <code>SELECT * FROM SERVICE ORDER BY service_date DESC;</code>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Service Date</th>
+                            <th>Vehicle Number</th>
+                            <th>Customer</th>
+                            <th>Service Type</th>
+                            <th>Status</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if sorted_services %}
+                            {% for s in sorted_services %}
+                            <tr>
+                                <td><span class="id-badge">#{{ s.service_id }}</span></td>
+                                <td><strong>{{ s.service_date }}</strong></td>
+                                <td>{{ s.vehicle_number }}</td>
+                                <td>{{ s.customer_name }}</td>
+                                <td>{{ s.service_type }}</td>
+                                <td>
+                                    <span class="badge {% if s.service_status == 'Completed' %}badge-success{% else %}badge-warning{% endif %}">
+                                        {{ s.service_status }}
+                                    </span>
+                                </td>
+                                <td><strong class="cost-text">₹{{ "{:,.2f}".format(s.service_cost) }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center empty-cell">No records available.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 6. VEHICLES BEGINNING WITH 'TN38' (SECTION D3) -->
+    <section class="report-section" id="section-tn38">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <div class="section-tag">OPERATION: D3. PATTERN MATCHING (LIKE)</div>
+                    <h3>Vehicles Beginning with 'TN38' (Coimbatore North RTO)</h3>
+                    <p class="card-subtitle">Pattern matching with <code>LIKE 'TN38%'</code></p>
+                </div>
+            </div>
+
+            <div class="sql-code-box">
+                <span class="sql-tag">Oracle SQL:</span>
+                <code>SELECT * FROM VEHICLE WHERE vehicle_number LIKE 'TN38%';</code>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Vehicle ID</th>
+                            <th>Vehicle Number</th>
+                            <th>Type</th>
+                            <th>Model</th>
+                            <th>Owner Name</th>
+                            <th>Contact</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if tn38_vehicles %}
+                            {% for v in tn38_vehicles %}
+                            <tr>
+                                <td><span class="id-badge">#{{ v.vehicle_id }}</span></td>
+                                <td><span class="plate-badge">{{ v.vehicle_number }}</span></td>
+                                <td>{{ v.vehicle_type }}</td>
+                                <td><strong>{{ v.vehicle_model }}</strong></td>
+                                <td>{{ v.customer_name }}</td>
+                                <td><code>{{ v.contact_number }}</code></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center empty-cell">No vehicles matching pattern 'TN38%'.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- 7. SERVICES BETWEEN ₹2,000 AND ₹4,000 (SECTION D4) -->
+    <section class="report-section" id="section-cost-range">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <div class="section-tag">OPERATION: D4. RANGE FILTERING (BETWEEN)</div>
+                    <h3>Services with Cost Between ₹2,000 and ₹4,000</h3>
+                    <p class="card-subtitle">Mid-tier repair and maintenance jobs filtered with <code>BETWEEN 2000 AND 4000</code></p>
+                </div>
+            </div>
+
+            <div class="sql-code-box">
+                <span class="sql-tag">Oracle SQL:</span>
+                <code>SELECT * FROM SERVICE WHERE service_cost BETWEEN 2000.00 AND 4000.00 ORDER BY service_cost ASC;</code>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Vehicle Number</th>
+                            <th>Model</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Service Type</th>
+                            <th>Status</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if cost_range_services %}
+                            {% for c in cost_range_services %}
+                            <tr>
+                                <td><span class="id-badge">#{{ c.service_id }}</span></td>
+                                <td>{{ c.vehicle_number }}</td>
+                                <td>{{ c.vehicle_model }}</td>
+                                <td>{{ c.customer_name }}</td>
+                                <td>{{ c.service_date }}</td>
+                                <td>{{ c.service_type }}</td>
+                                <td>
+                                    <span class="badge {% if c.service_status == 'Completed' %}badge-success{% else %}badge-warning{% endif %}">
+                                        {{ c.service_status }}
+                                    </span>
+                                </td>
+                                <td><strong class="cost-text">₹{{ "{:,.2f}".format(c.service_cost) }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center empty-cell">No service records in the ₹2,000–₹4,000 range.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

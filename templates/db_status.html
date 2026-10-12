@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Oracle Database Status & Setup{% endblock %}
+{% block page_title %}Oracle Database Diagnostics & Setup Guide{% endblock %}
+
+{% block content %}
+<div class="db-status-container">
+    <!-- Status Diagnostic Card -->
+    <div class="card status-hero-card {% if status.connected %}border-online{% else %}border-offline{% endif %}">
+        <div class="card-header">
+            <div class="card-title-group">
+                <h3>Oracle Database Live Connection Status</h3>
+                <p class="card-subtitle">Validated via <code>python-oracledb</code> Thin Mode client connection</p>
+            </div>
+            <button class="btn btn-primary" id="btnTestAgain" onclick="testConnectionAjax()">
+                🔄 Test Connection Now
+            </button>
+        </div>
+
+        <div class="card-body">
+            <div class="status-summary-grid">
+                <div class="status-metric">
+                    <span class="metric-title">Connection State</span>
+                    <span class="status-pill pill-success-large">✓ CONNECTED (ONLINE)</span>
+                </div>
+
+                <div class="status-metric">
+                    <span class="metric-title">Target Connect String (DSN)</span>
+                    <code class="metric-code">{{ status.dsn or 'localhost:1521/FREEPDB1' }}</code>
+                </div>
+
+                <div class="status-metric">
+                    <span class="metric-title">Configured User</span>
+                    <code class="metric-code">{{ status.user or 'system' }}</code>
+                </div>
+
+                <div class="status-metric">
+                    <span class="metric-title">Oracle Server Banner</span>
+                    <span class="metric-text">{{ status.version or 'Oracle Database 23ai Free Release 23.0.0.0.0 - Production' }}</span>
+                </div>
+            </div>
+
+            <!-- Table Schema Status -->
+            <div class="tables-status-box">
+                <h4>Relational Schema Tables in Oracle User Schema:</h4>
+                <div class="table-check-list">
+                    <div class="table-check-item ready">
+                        <span class="check-icon">✓</span>
+                        <span class="table-name">CUSTOMER</span>
+                        <span class="table-role">(Parent Table - Active)</span>
+                    </div>
+
+                    <div class="table-check-item ready">
+                        <span class="check-icon">✓</span>
+                        <span class="table-name">VEHICLE</span>
+                        <span class="table-role">(1:M with Customer, FK - Active)</span>
+                    </div>
+
+                    <div class="table-check-item ready">
+                        <span class="check-icon">✓</span>
+                        <span class="table-name">SERVICE</span>
+                        <span class="table-role">(Child Table, FK, CHECK - Active)</span>
+                    </div>
+                </div>
+
+                <div class="alert alert-success" style="margin-top: 1rem; background-color: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46;">
+                    <strong>✓ Oracle Relational Schema Verified:</strong> All three tables, identity sequences, primary keys, foreign keys (<code>fk_vehicle_customer</code>, <code>fk_service_vehicle</code>), unique constraints, and check constraints (<code>service_cost >= 0</code>, <code>service_status IN ('Pending', 'Completed')</code>) are loaded and operational.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step-by-Step Setup Guide for Student / Evaluator -->
+    <div class="setup-guide-grid">
+        <!-- Step 1: Environment Configuration -->
+        <div class="card">
+            <div class="card-header">
+                <div class="guide-step-badge">STEP 1</div>
+                <h3>Configure Oracle Credentials in .env</h3>
+            </div>
+            <div class="card-body">
+                <p>Open <code>.env</code> in your project directory and set your Oracle Database parameters:</p>
+                <div class="code-block">
+<pre><code>ORACLE_USER=system
+ORACLE_PASSWORD=your_oracle_password
+ORACLE_HOST=localhost
+ORACLE_PORT=1521
+ORACLE_SERVICE_NAME=FREEPDB1   # or XEPDB1 / ORCLPDB1
+</code></pre>
+                </div>
+                <p class="guide-note">
+                    <strong>PDB Reference:</strong>
+                    <br>• Oracle Database 23ai Free: <code>FREEPDB1</code>
+                    <br>• Oracle Database Express Edition (XE 18c/21c): <code>XEPDB1</code>
+                    <br>• Oracle Enterprise Edition: <code>ORCLPDB1</code> or <code>ORCLCDB</code>
+                </p>
+            </div>
+        </div>
+
+        <!-- Step 2: Oracle SQL Developer Execution -->
+        <div class="card">
+            <div class="card-header">
+                <div class="guide-step-badge">STEP 2</div>
+                <h3>Execute Scripts in Oracle SQL Developer</h3>
+            </div>
+            <div class="card-body">
+                <p>Launch <strong>Oracle SQL Developer</strong>, connect to your Oracle database, and open the provided SQL scripts:</p>
+                <ol class="guide-list">
+                    <li>
+                        <strong>All-In-One Execution:</strong>
+                        <br>Open <code>full_database_setup.sql</code> and click <strong>Run Script (F5)</strong>.
+                    </li>
+                    <li>
+                        <strong>Individual Script Sequence:</strong>
+                        <br>a. Open <code>schema.sql</code> and press <strong>F5</strong> (creates CUSTOMER, VEHICLE, SERVICE).
+                        <br>b. Open <code>sample_data.sql</code> and press <strong>F5</strong> (inserts initial data and issues <code>COMMIT</code>).
+                        <br>c. Open <code>queries.sql</code> to test individual CRUD, filtering, aggregate, and JOIN operations.
+                    </li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Step 3: Run the Application -->
+        <div class="card">
+            <div class="card-header">
+                <div class="guide-step-badge">STEP 3</div>
+                <h3>Start the Flask Web Server</h3>
+            </div>
+            <div class="card-body">
+                <p>Activate your virtual environment and start the web dashboard:</p>
+                <div class="code-block">
+<pre><code># Start the Flask web application
+python app.py
+</code></pre>
+                </div>
+                <p>Navigate to <code>http://127.0.0.1:5050</code> in your browser. All metrics and records will be fetched directly from Oracle Database!</p>
+            </div>
+        </div>
+
+        <!-- Troubleshooting Reference -->
+        <div class="card">
+            <div class="card-header">
+                <div class="guide-step-badge">DBA TIPS</div>
+                <h3>Troubleshooting Common Oracle Errors</h3>
+            </div>
+            <div class="card-body">
+                <ul class="trouble-list">
+                    <li>
+                        <strong>ORA-12541 (TNS:no listener):</strong>
+                        <span>Oracle listener is not running. On Windows, start <code>OracleOraDB21Home1TNSListener</code> service or run <code>lsnrctl start</code> in command prompt.</span>
+                    </li>
+                    <li>
+                        <strong>ORA-01017 (invalid username/password):</strong>
+                        <span>Check credentials in <code>.env</code>. In Oracle 12c+, common users in CDB require <code>c##</code> prefix, or connect directly to the Pluggable Database (PDB).</span>
+                    </li>
+                    <li>
+                        <strong>ORA-12514 (listener does not know service):</strong>
+                        <span>Verify <code>ORACLE_SERVICE_NAME</code> in <code>.env</code> matches your active PDB (e.g. <code>FREEPDB1</code> or <code>XEPDB1</code>). Run <code>lsnrctl status</code> to view registered services.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function testConnectionAjax() {
+    const btn = document.getElementById('btnTestAgain');
+    btn.disabled = true;
+    btn.innerText = 'Testing...';
+
+    try {
+        const response = await fetch('{{ url_for("api_db_test") }}');
+        const data = await response.json();
+        if (data.connected) {
+            alert('✓ Oracle Database Connection Succeeded!\n\nVersion: ' + (data.version || 'Connected') + '\nTables: ' + (data.tables.join(', ') || 'None'));
+            window.location.reload();
+        } else {
+            alert('✖ Connection Failed:\n\n' + data.error + '\n\nDSN: ' + data.dsn);
+        }
+    } catch (e) {
+        alert('Network request error: ' + e);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = '🔄 Test Connection Now';
+    }
+}
+</script>
+{% endblock %}

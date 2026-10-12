@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Vehicle #{{ vehicle.vehicle_id }}{% endblock %}
+{% block page_title %}Edit Vehicle Details{% endblock %}
+
+{% block content %}
+<div class="edit-page-container">
+    <div class="card form-card">
+        <div class="card-header">
+            <div class="card-title-group">
+                <h3>Edit Vehicle Record (Oracle UPDATE)</h3>
+                <p class="card-subtitle">Updating Primary Key <code>vehicle_id = {{ vehicle.vehicle_id }}</code></p>
+            </div>
+            <a href="{{ url_for('vehicles_list') }}" class="btn btn-sm btn-outline">&larr; Back to Vehicles</a>
+        </div>
+
+        <form method="POST" action="{{ url_for('vehicle_edit', vehicle_id=vehicle.vehicle_id) }}" class="form-standard">
+            <div class="card-body">
+                <div class="form-group">
+                    <label class="form-label">Vehicle ID (Auto-Generated Identity PK)</label>
+                    <input type="text" class="form-control" value="#{{ vehicle.vehicle_id }}" disabled readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="vehicle_number" class="form-label">Registration Number <span class="required">*</span></label>
+                    <input 
+                        type="text" 
+                        name="vehicle_number" 
+                        id="vehicle_number" 
+                        class="form-control text-uppercase" 
+                        value="{{ vehicle.vehicle_number }}" 
+                        required
+                        maxlength="20"
+                    >
+                    <small class="form-hint">Oracle UNIQUE constraint: <code>uq_vehicle_number</code>.</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-half">
+                        <label for="vehicle_type" class="form-label">Vehicle Type <span class="required">*</span></label>
+                        <select name="vehicle_type" id="vehicle_type" class="form-control" required>
+                            <option value="Car" {% if vehicle.vehicle_type == 'Car' %}selected{% endif %}>Car</option>
+                            <option value="Bike" {% if vehicle.vehicle_type == 'Bike' %}selected{% endif %}>Bike</option>
+                            <option value="Scooter" {% if vehicle.vehicle_type == 'Scooter' %}selected{% endif %}>Scooter</option>
+                            <option value="SUV" {% if vehicle.vehicle_type == 'SUV' %}selected{% endif %}>SUV</option>
+                            <option value="Van" {% if vehicle.vehicle_type == 'Van' %}selected{% endif %}>Van</option>
+                            <option value="Truck" {% if vehicle.vehicle_type == 'Truck' %}selected{% endif %}>Truck</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group col-half">
+                        <label for="vehicle_model" class="form-label">Vehicle Model <span class="required">*</span></label>
+                        <input 
+                            type="text" 
+                            name="vehicle_model" 
+                            id="vehicle_model" 
+                            class="form-control" 
+                            value="{{ vehicle.vehicle_model }}" 
+                            required
+                            maxlength="100"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="customer_id" class="form-label">Assign Owner (Customer FK) <span class="required">*</span></label>
+                    <select name="customer_id" id="customer_id" class="form-control" required>
+                        {% for c in customers %}
+                            <option value="{{ c.customer_id }}" {% if c.customer_id == vehicle.customer_id %}selected{% endif %}>
+                                {{ c.customer_name }} (#{{ c.customer_id }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="card-footer form-actions">
+                <a href="{{ url_for('vehicles_list') }}" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary">Update Vehicle Details</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environment Variables
+# (Credentials should stay local; .env.example is tracked)
+.env
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# IDE / Editor configuration
+.vscode/
+.idea/
+*.swp
+*.swo

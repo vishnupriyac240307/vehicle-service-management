@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Service Center Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+    <!-- Quick Welcome & Info Bar -->
+    <div class="welcome-bar">
+        <div class="welcome-text">
+            <h2>Welcome to Vehicle Service Center Operations</h2>
+            <p>Real-time vehicle maintenance, customer profiles, and service work-order tracking backed by Oracle Database.</p>
+        </div>
+        <div class="quick-actions-bar">
+            <a href="{{ url_for('customers_list') }}#addModal" class="btn btn-secondary">+ New Customer</a>
+            <a href="{{ url_for('vehicles_list') }}#addModal" class="btn btn-secondary">+ Register Vehicle</a>
+            <a href="{{ url_for('services_list') }}#addModal" class="btn btn-primary">+ Book Service</a>
+        </div>
+    </div>
+
+    <!-- Metric Stat Cards -->
+    <div class="stats-grid">
+        <div class="stat-card card-blue">
+            <div class="stat-header">
+                <span class="stat-title">Total Customers</span>
+                <span class="stat-icon">👥</span>
+            </div>
+            <div class="stat-value">{{ stats.customers }}</div>
+            <div class="stat-footer">
+                <a href="{{ url_for('customers_list') }}">View all customers &rarr;</a>
+            </div>
+        </div>
+
+        <div class="stat-card card-purple">
+            <div class="stat-header">
+                <span class="stat-title">Registered Vehicles</span>
+                <span class="stat-icon">🚘</span>
+            </div>
+            <div class="stat-value">{{ stats.vehicles }}</div>
+            <div class="stat-footer">
+                <a href="{{ url_for('vehicles_list') }}">View all vehicles &rarr;</a>
+            </div>
+        </div>
+
+        <div class="stat-card card-cyan">
+            <div class="stat-header">
+                <span class="stat-title">Total Services</span>
+                <span class="stat-icon">🔧</span>
+            </div>
+            <div class="stat-value">{{ stats.services }}</div>
+            <div class="stat-footer">
+                <a href="{{ url_for('services_list') }}">View all work orders &rarr;</a>
+            </div>
+        </div>
+
+        <div class="stat-card card-amber">
+            <div class="stat-header">
+                <span class="stat-title">Pending Services</span>
+                <span class="stat-icon">⏳</span>
+            </div>
+            <div class="stat-value">{{ stats.pending }}</div>
+            <div class="stat-footer">
+                <a href="{{ url_for('services_list', status='Pending') }}">Review pending work &rarr;</a>
+            </div>
+        </div>
+
+        <div class="stat-card card-green">
+            <div class="stat-header">
+                <span class="stat-title">Total Revenue</span>
+                <span class="stat-icon">₹</span>
+            </div>
+            <div class="stat-value">₹{{ "{:,.2f}".format(stats.revenue) }}</div>
+            <div class="stat-footer">
+                <a href="{{ url_for('reports') }}">View revenue reports &rarr;</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Services & Database Schema Overview Grid -->
+    <div class="content-grid-2col">
+        <!-- Recent Services Work Orders -->
+        <div class="card recent-services-card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <h3>Recent Service Orders</h3>
+                    <p class="card-subtitle">Live records queried from Oracle with 3-table relational JOIN</p>
+                </div>
+                <a href="{{ url_for('services_list') }}" class="btn btn-sm btn-outline">View All</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Vehicle</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Service Type</th>
+                            <th>Status</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recent_services %}
+                            {% for s in recent_services %}
+                            <tr>
+                                <td><span class="id-badge">#{{ s.service_id }}</span></td>
+                                <td>
+                                    <strong>{{ s.vehicle_number }}</strong>
+                                    <div class="sub-text">{{ s.vehicle_model }}</div>
+                                </td>
+                                <td>{{ s.customer_name }}</td>
+                                <td>{{ s.service_date }}</td>
+                                <td>{{ s.service_type }}</td>
+                                <td>
+                                    <span class="badge {% if s.service_status == 'Completed' %}badge-success{% else %}badge-warning{% endif %}">
+                                        {{ s.service_status }}
+                                    </span>
+                                </td>
+                                <td><strong class="cost-text">₹{{ "{:,.2f}".format(s.service_cost) }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center empty-cell">
+                                    {% if not db_connected %}
+                                        <p class="text-muted">Oracle Database connection needed. Please check connection in Oracle DB Status.</p>
+                                    {% else %}
+                                        <p class="text-muted">No service records registered yet. Click "+ Book Service" to add records.</p>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Academic System Overview Card -->
+        <div class="card dba-spec-card">
+            <div class="card-header">
+                <div class="card-title-group">
+                    <h3>Oracle Database Architecture</h3>
+                    <p class="card-subtitle">TN SKILLS course relational schema specs</p>
+                </div>
+                <a href="{{ url_for('reports') }}" class="btn btn-sm btn-primary">Run Queries</a>
+            </div>
+
+            <div class="schema-spec-list">
+                <div class="schema-item">
+                    <div class="schema-header">
+                        <span class="table-tag">CUSTOMER</span>
+                        <span class="rel-badge">1 : M (VEHICLE)</span>
+                    </div>
+                    <p class="schema-desc"><code>customer_id</code> (PK Identity), <code>customer_name</code>, <code>contact_number</code>, <code>email</code> (UNIQUE), <code>address</code></p>
+                </div>
+
+                <div class="schema-item">
+                    <div class="schema-header">
+                        <span class="table-tag">VEHICLE</span>
+                        <span class="rel-badge">1 : M (SERVICE)</span>
+                    </div>
+                    <p class="schema-desc"><code>vehicle_id</code> (PK Identity), <code>vehicle_number</code> (UNIQUE), <code>vehicle_type</code>, <code>vehicle_model</code>, <code>customer_id</code> (FK)</p>
+                </div>
+
+                <div class="schema-item">
+                    <div class="schema-header">
+                        <span class="table-tag">SERVICE</span>
+                        <span class="rel-badge">Child Table</span>
+                    </div>
+                    <p class="schema-desc"><code>service_id</code> (PK Identity), <code>vehicle_id</code> (FK), <code>service_date</code>, <code>service_type</code>, <code>service_status</code> (CHECK), <code>service_cost</code> (CHECK >= 0)</p>
+                </div>
+
+                <div class="dba-callout">
+                    <div class="callout-icon">💡</div>
+                    <div class="callout-body">
+                        <strong>Relational Integrity:</strong>
+                        <span>Oracle Foreign Key constraints (<code>fk_vehicle_customer</code> and <code>fk_service_vehicle</code>) prevent orphaned records and protect against unintended deletions.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

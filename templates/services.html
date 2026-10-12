@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+
+{% block title %}Service Management{% endblock %}
+{% block page_title %}Service Order Management{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <!-- Filter and Toolbar -->
+    <div class="page-toolbar">
+        <div class="filter-group">
+            <span class="filter-label">Filter Status:</span>
+            <a href="{{ url_for('services_list') }}" class="btn-filter {% if not status_filter and not vehicle_filter %}active{% endif %}">
+                All
+            </a>
+            <a href="{{ url_for('services_list', status='Pending') }}" class="btn-filter {% if status_filter == 'Pending' %}active{% endif %}">
+                ⏳ Pending
+            </a>
+            <a href="{{ url_for('services_list', status='Completed') }}" class="btn-filter {% if status_filter == 'Completed' %}active{% endif %}">
+                ✓ Completed
+            </a>
+            {% if vehicle_filter %}
+                <span class="filter-tag">
+                    Filtered by Vehicle #{{ vehicle_filter }}
+                    <a href="{{ url_for('services_list') }}" class="tag-remove">&times;</a>
+                </span>
+            {% endif %}
+        </div>
+
+        <button class="btn btn-primary" id="openAddServiceBtn" onclick="openModal('addServiceModal')">
+            + Book Service Order
+        </button>
+    </div>
+
+    <!-- Services Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title-group">
+                <h3>Work Orders (Oracle Table: SERVICE JOIN VEHICLE JOIN CUSTOMER)</h3>
+                <p class="card-subtitle">Displaying {{ services|length }} service work orders with relational vehicle information</p>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Vehicle</th>
+                        <th>Owner</th>
+                        <th>Service Date</th>
+                        <th>Service Type</th>
+                        <th>Status</th>
+                        <th>Cost (INR)</th>
+                        <th class="text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if services %}
+                        {% for s in services %}
+                        <tr>
+                            <td><span class="id-badge">#{{ s.service_id }}</span></td>
+                            <td>
+                                <strong class="plate-badge">{{ s.vehicle_number }}</strong>
+                                <div class="sub-text">{{ s.vehicle_model }}</div>
+                            </td>
+                            <td>{{ s.customer_name }}</td>
+                            <td><strong>{{ s.service_date }}</strong></td>
+                            <td>{{ s.service_type }}</td>
+                            <td>
+                                <span class="badge {% if s.service_status == 'Completed' %}badge-success{% else %}badge-warning{% endif %}">
+                                    {{ s.service_status }}
+                                </span>
+                            </td>
+                            <td><strong class="cost-text">₹{{ "{:,.2f}".format(s.service_cost) }}</strong></td>
+                            <td class="text-right table-actions">
+                                <!-- Status Toggle Form -->
+                                <form method="POST" action="{{ url_for('service_toggle_status', service_id=s.service_id) }}" style="display:inline;">
+                                    {% if s.service_status == 'Pending' %}
+                                        <input type="hidden" name="new_status" value="Completed">
+                                        <button type="submit" class="btn btn-sm btn-success-outline" title="Mark Completed">
+                                            ✓ Complete
+                                        </button>
+                                    {% else %}
+                                        <input type="hidden" name="new_status" value="Pending">
+                                        <button type="submit" class="btn btn-sm btn-outline" title="Mark Pending">
+                                            Reopen
+                                        </button>
+                                    {% endif %}
+                                </form>
+
+                                <a href="{{ url_for('service_edit', service_id=s.service_id) }}" class="btn btn-sm btn-outline">
+                                    Edit
+                                </a>
+
+                                <form 
+                                    method="POST" 
+                                    action="{{ url_for('service_delete', service_id=s.service_id) }}" 
+                                    style="display:inline;"
+                                    onsubmit="return confirm('Are you sure you want to delete service order #{{ s.service_id }}?');"
+                                >
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center empty-cell">
+                                {% if not db_connected %}
+                                    <p class="text-muted">Oracle Database is offline. Configure credentials to display live service records.</p>
+                                {% elif status_filter %}
+                                    <p class="text-muted">No services found with status "<strong>{{ status_filter }}</strong>".</p>
+                                {% else %}
+                                    <p class="text-muted">No service records found. Click "+ Book Service Order" to add one.</p>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add New Service Record -->
+<div class="modal-backdrop" id="addServiceModal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h3>Book New Service Work Order</h3>
+            <button type="button" class="modal-close" onclick="closeModal('addServiceModal')">&times;</button>
+        </div>
+
+        <form method="POST" action="{{ url_for('service_add') }}" id="addServiceForm" class="form-standard">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="vehicle_id" class="form-label">Select Vehicle (Foreign Key) <span class="required">*</span></label>
+                    <select name="vehicle_id" id="vehicle_id" class="form-control" required>
+                        <option value="">-- Choose Registered Vehicle --</option>
+                        {% for v in vehicles %}
+                            <option value="{{ v.vehicle_id }}">
+                                {{ v.vehicle_number }} - {{ v.vehicle_model }} (Owner: {{ v.customer_name }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-hint">Links to <code>VEHICLE(vehicle_id)</code> via Foreign Key <code>fk_service_vehicle</code>.</small>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-half">
+                        <label for="service_date" class="form-label">Service Date <span class="required">*</span></label>
+                        <input 
+                            type="date" 
+                            name="service_date" 
+                            id="service_date" 
+                            class="form-control" 
+                            value="{{ current_date or '2026-10-12' }}" 
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group col-half">
+                        <label for="service_type" class="form-label">Service Type <span class="required">*</span></label>
+                        <input 
+                            type="text" 
+                            name="service_type" 
+                            id="service_type" 
+                            class="form-control" 
+                            placeholder="e.g. General Service, Oil Change" 
+                            required
+                            list="service_types_list"
+                            maxlength="50"
+                        >
+                        <datalist id="service_types_list">
+                            <option value="General Service">
+                            <option value="Oil Change">
+                            <option value="Brake Service">
+                            <option value="Tire Rotation">
+                            <option value="Battery Check">
+                            <option value="Wheel Alignment">
+                            <option value="AC Maintenance">
+                        </datalist>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group col-half">
+                        <label for="service_status" class="form-label">Service Status <span class="required">*</span></label>
+                        <select name="service_status" id="service_status" class="form-control" required>
+                            <option value="Pending">Pending</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                        <small class="form-hint">Oracle CHECK constraint: 'Pending' or 'Completed'.</small>
+                    </div>
+
+                    <div class="form-group col-half">
+                        <label for="service_cost" class="form-label">Service Cost (₹ INR) <span class="required">*</span></label>
+                        <input 
+                            type="number" 
+                            name="service_cost" 
+                            id="service_cost" 
+                            class="form-control" 
+                            placeholder="e.g. 3500.00" 
+                            step="0.01" 
+                            min="0" 
+                            required
+                        >
+                        <small class="form-hint">Oracle CHECK constraint: <code>service_cost >= 0</code>.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('addServiceModal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create Service (INSERT)</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

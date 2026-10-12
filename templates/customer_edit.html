@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Customer #{{ customer.customer_id }}{% endblock %}
+{% block page_title %}Edit Customer Profile{% endblock %}
+
+{% block content %}
+<div class="edit-page-container">
+    <div class="card form-card">
+        <div class="card-header">
+            <div class="card-title-group">
+                <h3>Edit Customer Record (Oracle UPDATE)</h3>
+                <p class="card-subtitle">Updating Primary Key <code>customer_id = {{ customer.customer_id }}</code></p>
+            </div>
+            <a href="{{ url_for('customers_list') }}" class="btn btn-sm btn-outline">&larr; Back to Customers</a>
+        </div>
+
+        <form method="POST" action="{{ url_for('customer_edit', customer_id=customer.customer_id) }}" class="form-standard">
+            <div class="card-body">
+                <div class="form-group">
+                    <label class="form-label">Customer ID (Auto-Generated Identity PK)</label>
+                    <input type="text" class="form-control" value="#{{ customer.customer_id }}" disabled readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="customer_name" class="form-label">Customer Name <span class="required">*</span></label>
+                    <input 
+                        type="text" 
+                        name="customer_name" 
+                        id="customer_name" 
+                        class="form-control" 
+                        value="{{ customer.customer_name }}" 
+                        required
+                        maxlength="100"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="contact_number" class="form-label">Contact Number <span class="required">*</span></label>
+                    <input 
+                        type="tel" 
+                        name="contact_number" 
+                        id="contact_number" 
+                        class="form-control" 
+                        value="{{ customer.contact_number }}" 
+                        required
+                        maxlength="20"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="email" class="form-label">Email Address <span class="required">*</span></label>
+                    <input 
+                        type="email" 
+                        name="email" 
+                        id="email" 
+                        class="form-control" 
+                        value="{{ customer.email }}" 
+                        required
+                        maxlength="100"
+                    >
+                    <small class="form-hint">Unique constraint enforced by Oracle <code>uq_customer_email</code>.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="address" class="form-label">Address</label>
+                    <textarea 
+                        name="address" 
+                        id="address" 
+                        class="form-control" 
+                        rows="3"
+                        maxlength="255"
+                    >{{ customer.address or '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="card-footer form-actions">
+                <a href="{{ url_for('customers_list') }}" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-primary">Update Customer Details</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
